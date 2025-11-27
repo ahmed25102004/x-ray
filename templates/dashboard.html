@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X-Ray AI Dashboard</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #1a73e8;
+            --primary-light: #e8f0fe;
+            --primary-dark: #0d47a1;
+            --secondary: #34a853;
+            --warning: #f9ab00;
+            --danger: #ea4335;
+            --dark: #202124;
+            --light: #f8f9fa;
+            --gray: #5f6368;
+            --sidebar-width: 280px;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+            overflow-x: hidden;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            background: linear-gradient(180deg, #1a237e 0%, #283593 100%);
+            color: white;
+            height: 100vh;
+            position: fixed;
+            width: var(--sidebar-width);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar.collapsed {
+            width: 70px;
+        }
+        
+        .sidebar.collapsed .nav-link span,
+        .sidebar.collapsed .sidebar-logo h4,
+        .sidebar.collapsed .sidebar-logo small,
+        .sidebar.collapsed .dropdown-toggle div {
+            display: none;
+        }
+        
+        .sidebar.collapsed .sidebar-logo {
+            padding: 20px 0;
+        }
+        
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+        }
+        
+        .sidebar .nav-link i {
+            margin-right: 10px;
+            font-size: 18px;
+            min-width: 24px;
+        }
+        
+        .sidebar-logo {
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        
+        .sidebar-toggle {
+            position: absolute;
+            top: 20px;
+            right: -15px;
+            background: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            cursor: pointer;
+            z-index: 1001;
+            color: var(--primary);
+        }
+        
+        /* Main Content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .main-content.expanded {
+            margin-left: 70px;
+        }
+        
+        /* Cards */
+        .dashboard-card {
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border: none;
+            transition: transform 0.2s, box-shadow 0.2s;
+            overflow: hidden;
+        }
+        
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+        
+        /* Stats Cards */
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .stat-card .number {
+            font-size: 2.2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            font-size: 1.5rem;
+        }
+        
+        /* Preview Image */
+        .preview-container {
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            background-color: #f8f9fa;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .preview-container.dragover {
+            border-color: var(--primary);
+            background-color: var(--primary-light);
+        }
+        
+        #preview {
+            max-width: 100%;
+            max-height: 250px;
+            border-radius: 10px;
+            display: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        /* Result Box */
+        #result-box {
+            margin-top: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            border-left: 5px solid var(--primary);
+            border-radius: 8px;
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        /* Activity List */
+        .activity-item {
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.2s;
+        }
+        
+        .activity-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        
+        /* Custom button */
+        .btn-primary {
+            background-color: var(--primary);
+            border-color: var(--primary);
+            font-weight: 500;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            border-color: var(--primary-dark);
+        }
+        
+        /* Progress Bar */
+        .progress {
+            height: 8px;
+            border-radius: 4px;
+        }
+        
+        /* Custom badges */
+        .badge {
+            font-weight: 500;
+            padding: 6px 10px;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            .sidebar {
+                width: 70px;
+            }
+            
+            .sidebar .nav-link span,
+            .sidebar .sidebar-logo h4,
+            .sidebar .sidebar-logo small,
+            .sidebar .dropdown-toggle div {
+                display: none;
+            }
+            
+            .main-content {
+                margin-left: 70px;
+            }
+            
+            .sidebar-toggle {
+                display: none;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .sidebar.collapsed {
+                width: 100%;
+            }
+            
+            .sidebar.collapsed .nav-link span,
+            .sidebar.collapsed .sidebar-logo h4,
+            .sidebar.collapsed .sidebar-logo small,
+            .sidebar.collapsed .dropdown-toggle div {
+                display: block;
+            }
+        }
+        
+        /* Loading Animation */
+        .spinner-border {
+            width: 1.2rem;
+            height: 1.2rem;
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Chart container */
+        .chart-container {
+            height: 250px;
+            position: relative;
+        }
+        
+        /* Notification badge */
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: var(--danger);
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Custom scrollbar */
+        .sidebar::-webkit-scrollbar {
+            width: 5px;
+        }
+        
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 10px;
+        }
+        
+        /* Status indicators */
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .status-online {
+            background-color: var(--secondary);
+        }
+        
+        .status-offline {
+            background-color: var(--gray);
+        }
+        
+        .status-busy {
+            background-color: var(--warning);
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar col-md-3 col-lg-2 p-0">
+        <div class="sidebar-toggle">
+            <i class="bi bi-chevron-left" id="sidebarToggleIcon"></i>
+        </div>
+        <div class="d-flex flex-column p-3 h-100">
+            <div class="sidebar-logo text-center">
+                <i class="bi bi-cpu-fill fs-2 text-white"></i>
+                <h4 class="mt-2 mb-0 text-white">X-Ray AI</h4>
+                <small class="text-white-50">Medical Imaging</small>
+            </div>
+            
+            <ul class="nav nav-pills flex-column mb-auto">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-link">
+                        <i class="bi bi-cloud-upload"></i>
+                        <span>Upload Image</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-link">
+                        <i class="bi bi-clock-history"></i>
+                        <span>History</span>
+                        <span class="notification-badge">3</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-link">
+                        <i class="bi bi-graph-up"></i>
+                        <span>Analytics</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-link">
+                        <i class="bi bi-people"></i>
+                        <span>Patients</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-link">
+                        <i class="bi bi-gear"></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
+            </ul>
+            
+            <div class="mt-auto">
+                <div class="dropdown">
+                    <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle p-2 rounded" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false" style="background-color: rgba(255,255,255,0.1);">
+                        <img src="https://via.placeholder.com/40" alt="User" width="40" height="40" class="rounded-circle me-2">
+                        <div>
+                            <strong>Dr. Smith</strong>
+                            <small class="d-block text-white-50">Radiologist</small>
+                        </div>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>Profile</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-box-arrow-right me-2"></i>Sign out</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content p-4">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <div>
+                <h1 class="h2">X-Ray Classification Dashboard</h1>
+                <p class="text-muted mb-0">AI-powered analysis for medical imaging</p>
+            </div>
+            <div class="btn-toolbar mb-2 mb-md-0">
+                <div class="btn-group me-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-share me-1"></i>Share
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-download me-1"></i>Export
+                    </button>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle">
+                    <i class="bi bi-calendar3 me-1"></i>
+                    This week
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body stat-card">
+                        <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                            <i class="bi bi-clipboard-data"></i>
+                        </div>
+                        <h5 class="card-title text-muted">Total Scans</h5>
+                        <div class="number text-primary">1,247</div>
+                        <div class="progress mt-2">
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: 75%" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <p class="card-text text-success small mt-2">
+                            <i class="bi bi-arrow-up-right me-1"></i>+12% from last month
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body stat-card">
+                        <div class="stat-icon bg-success bg-opacity-10 text-success">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                        <h5 class="card-title text-muted">Accuracy</h5>
+                        <div class="number text-success">96.2%</div>
+                        <div class="progress mt-2">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: 96%" aria-valuenow="96" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <p class="card-text text-success small mt-2">
+                            <i class="bi bi-arrow-up-right me-1"></i>+2.5% improvement
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body stat-card">
+                        <div class="stat-icon bg-info bg-opacity-10 text-info">
+                            <i class="bi bi-lightning-charge"></i>
+                        </div>
+                        <h5 class="card-title text-muted">Processing Time</h5>
+                        <div class="number text-info">3.2s</div>
+                        <div class="progress mt-2">
+                            <div class="progress-bar bg-info" role="progressbar" style="width: 65%" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <p class="card-text text-danger small mt-2">
+                            <i class="bi bi-arrow-down-right me-1"></i>-0.4s from last week
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body stat-card">
+                        <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                        </div>
+                        <h5 class="card-title text-muted">Abnormalities</h5>
+                        <div class="number text-warning">18%</div>
+                        <div class="progress mt-2">
+                            <div class="progress-bar bg-warning" role="progressbar" style="width: 18%" aria-valuenow="18" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <p class="card-text text-success small mt-2">
+                            <i class="bi bi-arrow-up-right me-1"></i>+3% from last month
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Card -->
+        <div class="row">
+            <div class="col-lg-8 mb-4">
+                <div class="card dashboard-card h-100">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-cloud-arrow-up me-2"></i>Upload X-Ray Image
+                        </h5>
+                        <span class="badge bg-light text-dark">
+                            <span class="status-indicator status-online"></span>
+                            System Ready
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <div class="preview-container mb-4" id="dropZone">
+                            <i class="bi bi-cloud-arrow-up fs-1 text-muted mb-3"></i>
+                            <h5 class="mb-2">Drag & Drop X-Ray Image</h5>
+                            <p class="text-muted mb-3">or click to browse files</p>
+                            <input type="file" id="imageInput" class="d-none" accept="image/*">
+                            <button class="btn btn-primary" id="uploadBtn">
+                                <i class="bi bi-upload me-2"></i>Choose Image
+                            </button>
+                            <img id="preview" class="mt-4" />
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary btn-lg py-3" id="predictBtn">
+                                <i class="bi bi-play-circle me-2"></i>Run AI Analysis
+                            </button>
+                        </div>
+                        
+                        <div id="result-box"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Activity -->
+            <div class="col-lg-4 mb-4">
+                <div class="card dashboard-card h-100">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-clock-history me-2"></i>Recent Activity
+                        </h5>
+                        <a href="#" class="text-primary small">View All</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush">
+                            <div class="list-group-item activity-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <div>
+                                        <h6 class="mb-1">Chest X-Ray</h6>
+                                        <p class="mb-1 text-muted small">Normal findings, no abnormalities detected</p>
+                                    </div>
+                                    <span class="badge bg-success">Normal</span>
+                                </div>
+                                <small class="text-muted">2 hours ago</small>
+                            </div>
+                            <div class="list-group-item activity-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <div>
+                                        <h6 class="mb-1">Knee X-Ray</h6>
+                                        <p class="mb-1 text-muted small">Possible fracture detected in left tibia</p>
+                                    </div>
+                                    <span class="badge bg-warning">Abnormal</span>
+                                </div>
+                                <small class="text-muted">5 hours ago</small>
+                            </div>
+                            <div class="list-group-item activity-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <div>
+                                        <h6 class="mb-1">Spine X-Ray</h6>
+                                        <p class="mb-1 text-muted small">Normal alignment, no significant findings</p>
+                                    </div>
+                                    <span class="badge bg-success">Normal</span>
+                                </div>
+                                <small class="text-muted">Yesterday</small>
+                            </div>
+                            <div class="list-group-item activity-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <div>
+                                        <h6 class="mb-1">Hand X-Ray</h6>
+                                        <p class="mb-1 text-muted small">Moderate arthritis detected in joints</p>
+                                    </div>
+                                    <span class="badge bg-danger">Critical</span>
+                                </div>
+                                <small class="text-muted">2 days ago</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Additional Section: Model Performance -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card dashboard-card">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-graph-up me-2"></i>Model Performance Metrics
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 text-center">
+                                <h4 class="text-primary">98.7%</h4>
+                                <p class="text-muted">Sensitivity</p>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <h4 class="text-success">95.4%</h4>
+                                <p class="text-muted">Specificity</p>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <h4 class="text-info">96.2%</h4>
+                                <p class="text-muted">Accuracy</p>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <h4 class="text-warning">97.1%</h4>
+                                <p class="text-muted">F1 Score</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        let base64Image = "";
+        let sidebarCollapsed = false;
+
+        // Toggle sidebar
+        document.querySelector('.sidebar-toggle').addEventListener('click', function() {
+            const sidebar = document.querySelector('.sidebar');
+            const mainContent = document.querySelector('.main-content');
+            const icon = document.querySelector('#sidebarToggleIcon');
+            
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+            
+            if (sidebar.classList.contains('collapsed')) {
+                icon.classList.remove('bi-chevron-left');
+                icon.classList.add('bi-chevron-right');
+            } else {
+                icon.classList.remove('bi-chevron-right');
+                icon.classList.add('bi-chevron-left');
+            }
+            
+            sidebarCollapsed = !sidebarCollapsed;
+        });
+
+        // Trigger file input when upload button is clicked
+        document.getElementById("uploadBtn").addEventListener("click", function() {
+            document.getElementById("imageInput").click();
+        });
+
+        // Preview image
+        document.getElementById("imageInput").addEventListener("change", function () {
+            const file = this.files[0];
+            if (!file) return;
+            
+            handleFileSelection(file);
+        });
+
+        // Drag and drop functionality
+        const dropZone = document.getElementById('dropZone');
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+        
+        function highlight() {
+            dropZone.classList.add('dragover');
+        }
+        
+        function unhighlight() {
+            dropZone.classList.remove('dragover');
+        }
+        
+        dropZone.addEventListener('drop', handleDrop, false);
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length) {
+                handleFileSelection(files[0]);
+            }
+        }
+        
+        function handleFileSelection(file) {
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                base64Image = e.target.result.split(",")[1];
+                const preview = document.getElementById("preview");
+                preview.src = e.target.result;
+                preview.style.display = "block";
+                
+                // Update preview container text
+                const previewContainer = document.querySelector(".preview-container");
+                previewContainer.querySelector("i").style.display = "none";
+                previewContainer.querySelector("h5").style.display = "none";
+                previewContainer.querySelector("p").style.display = "none";
+            };
+
+            reader.readAsDataURL(file);
+        }
+
+        // Send prediction request
+        document.getElementById("predictBtn").addEventListener("click", async function () {
+            if (!base64Image) {
+                alert("Please select an image first!");
+                return;
+            }
+
+            // Show loading state
+            const btn = this;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing...';
+            btn.disabled = true;
+
+            try {
+                // Simulate API call with timeout
+                setTimeout(async () => {
+                    // In a real application, you would make an actual API call:
+                    /*
+                    const response = await fetch("/predict/", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ img_data: base64Image })
+                    });
+                    
+                    const data = await response.json();
+                    */
+                    
+                    // For demo purposes, we'll simulate a response
+                    const mockPredictions = [
+                        "Normal - No abnormalities detected",
+                        "Pneumonia - Mild consolidation in lower left lobe",
+                        "Fracture - Possible hairline fracture detected",
+                        "Arthritis - Joint space narrowing observed"
+                    ];
+                    
+                    const randomPrediction = mockPredictions[Math.floor(Math.random() * mockPredictions.length)];
+                    
+                    const box = document.getElementById("result-box");
+                    box.style.display = "block";
+                    box.innerHTML = `<strong>AI Analysis Result:</strong> ${randomPrediction}`;
+                    
+                    // Reset button
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }, 2000);
+            } catch (error) {
+                console.error("Error:", error);
+                alert("An error occurred while processing the image.");
+                
+                // Reset button
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
